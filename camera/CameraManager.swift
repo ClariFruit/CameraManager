@@ -274,6 +274,13 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
     }
     
     /**
+     zoom in to the requested scale
+    */
+    open func zoom(_ scale: CGFloat) {
+        _zoom(scale)
+    }
+
+    /**
      Asks the user for camera permissions. Only works if the permissions are not yet determined. Note that it'll also automaticaly ask about the microphone permissions if you selected VideoWithMic output.
      
      :param: completion Completion block with the result of permission request
