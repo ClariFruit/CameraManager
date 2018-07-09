@@ -632,9 +632,11 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
     fileprivate lazy var focusGesture = UITapGestureRecognizer()
     
     fileprivate func attachFocus(_ view: UIView) {
-        focusGesture.addTarget(self, action: #selector(CameraManager._focusStart(_:)))
-        view.addGestureRecognizer(focusGesture)
-        focusGesture.delegate = self
+        DispatchQueue.main.async {
+            self.focusGesture.addTarget(self, action: #selector(CameraManager._focusStart(_:)))
+            view.addGestureRecognizer(self.focusGesture)
+            self.focusGesture.delegate = self
+        }
     }
     
     @objc fileprivate func _focusStart(_ recognizer: UITapGestureRecognizer) {
