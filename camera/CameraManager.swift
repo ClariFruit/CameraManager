@@ -36,9 +36,12 @@ public enum CameraOutputQuality: Int {
     case low, medium, high
 }
 
+public protocol CameraManagerDelegate {
+    func onFrameCaptured(_ sampleBuffer: CMSampleBuffer)
+}
 
 /// Class for handling iDevices custom camera usage
-open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGestureRecognizerDelegate {
+open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGestureRecognizerDelegate, AVCaptureVideoDataOutputSampleBufferDelegate {
     
     // MARK: - Public properties
     
@@ -50,6 +53,9 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
     
     /// Property for capture session to customize camera settings.
     open var captureSession: AVCaptureSession?
+    
+    // Property to send events back to the class using the CameraMNanager
+    open var cameraManagerDelegate:CameraManagerDelegate? = nil
     
     /**
      Property to determine if the manager should show the error for the user. If you want to show the errors yourself set this to false. If you want to add custom error UI set showErrorBlock property.
@@ -262,6 +268,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
     
     fileprivate var stillImageOutput: AVCaptureStillImageOutput?
     fileprivate var movieOutput: AVCaptureMovieFileOutput?
+    fileprivate var videoOutput: AVCaptureVideoDataOutput?
     fileprivate var previewLayer: AVCaptureVideoPreviewLayer?
     fileprivate var library: PHPhotoLibrary?
     
@@ -405,6 +412,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
         self.mic = nil
         self.stillImageOutput = nil
         self.movieOutput = nil
+        self.videoOutput = nil
         self.animateCameraDeviceChange = oldAnimationValue
     }
     
@@ -465,6 +473,10 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
         }
         
         imageCompletion(image, nil)
+    }
+    
+    public func getPreviewLayer() -> AVCaptureVideoPreviewLayer? {
+        return self.previewLayer
     }
     
     fileprivate func _setVideoWithGPS(forLocation location: CLLocation) {
@@ -603,9 +615,9 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
      */
     open func startRecordingVideo() {
         if cameraOutputMode != .stillImage {
-            let videoOutput = _getMovieOutput()
+            let movieOutput = _getMovieOutput()
             // setup video mirroring
-            for connection in videoOutput.connections {
+            for connection in movieOutput.connections {
                 for port in connection.inputPorts {
                     
                     if port.mediaType == AVMediaType.video {
@@ -637,11 +649,11 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
             
             // Connect the location metadata input to the movie file output.
             let inputPort = newLocationMetadataInput.ports[0]
-            captureSession.addConnection(AVCaptureConnection(inputPorts: [inputPort], output: videoOutput))
+            captureSession.addConnection(AVCaptureConnection(inputPorts: [inputPort], output: movieOutput))
             
             _updateIlluminationMode(flashMode)
             
-            videoOutput.startRecording(to: _tempFilePath(), recordingDelegate: self)
+            movieOutput.startRecording(to: _tempFilePath(), recordingDelegate: self)
         } else {
             _show(NSLocalizedString("Capture session output still image", comment:""), message: NSLocalizedString("I can only take pictures", comment:""))
         }
@@ -1108,6 +1120,13 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
         return newStillImageOutput
     }
     
+    // AVCaptureVideoDataOutputSampleBufferDelegate
+    public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        if cameraManagerDelegate != nil {
+            self.cameraManagerDelegate?.onFrameCaptured(sampleBuffer)
+        }
+    }
+    
     @objc fileprivate func _orientationChanged() {
         var currentConnection: AVCaptureConnection?
 
@@ -1422,6 +1441,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
                 captureSession.canAddOutput(validStillImageOutput) {
                     captureSession.addOutput(validStillImageOutput)
             }
+
         case .videoOnly, .videoWithMic:
             let videoMovieOutput = _getMovieOutput()
             if let captureSession = captureSession,
@@ -1434,6 +1454,17 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
                     captureSession?.addInput(validMic)
             }
         }
+        
+        if self.cameraManagerDelegate != nil {
+            if let validVideoOutput = videoOutput,
+                let captureSession = captureSession,
+                captureSession.canAddOutput(validVideoOutput) {
+                    // Registering to recieve the captureOutput from AVCaptureVideoDataOutputSampleBufferDelegate
+                    validVideoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "VideoFramesQueue"))
+                    captureSession.addOutput(validVideoOutput)
+            }
+        }
+        
         captureSession?.commitConfiguration()
         _updateCameraQualityMode(cameraOutputQuality)
         _orientationChanged()
@@ -1446,6 +1477,9 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
         if movieOutput == nil {
             movieOutput = AVCaptureMovieFileOutput()
             movieOutput?.movieFragmentInterval = CMTime.invalid
+        }
+        if videoOutput == nil {
+            videoOutput = AVCaptureVideoDataOutput()
         }
         if library == nil {
             library = PHPhotoLibrary.shared()
