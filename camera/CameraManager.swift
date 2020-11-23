@@ -1122,9 +1122,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
     
     // AVCaptureVideoDataOutputSampleBufferDelegate
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        if cameraManagerDelegate != nil {
-            self.cameraManagerDelegate?.onFrameCaptured(sampleBuffer)
-        }
+        self.cameraManagerDelegate?.onFrameCaptured(sampleBuffer)
     }
     
     @objc fileprivate func _orientationChanged() {
