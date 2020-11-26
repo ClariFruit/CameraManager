@@ -308,7 +308,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
         return addLayerPreviewToView(view, newCameraOutputMode: newCameraOutputMode, completion: nil)
     }
     
-    @discardableResult open func addLayerPreviewToView(_ view: UIView, newCameraOutputMode: CameraOutputMode, completion: (() -> Void)?) -> CameraState {
+    @discardableResult open func addLayerPreviewToView(_ view: UIView, newCameraOutputMode: CameraOutputMode, completion: ((AVCaptureVideoPreviewLayer?) -> Void)?) -> CameraState {
         if _canLoadCamera() {
             if let _ = embeddingView {
                 if let validPreviewLayer = previewLayer {
@@ -319,14 +319,14 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
                 _addPreviewLayerToView(view)
                 cameraOutputMode = newCameraOutputMode
                 if let validCompletion = completion {
-                    validCompletion()
+                    validCompletion(self.previewLayer)
                 }
             } else {
                 _setupCamera {
                     self._addPreviewLayerToView(view)
                     self.cameraOutputMode = newCameraOutputMode
                     if let validCompletion = completion {
-                        validCompletion()
+                        validCompletion(self.previewLayer)
                     }
                 }
             }
@@ -473,10 +473,6 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
         }
         
         imageCompletion(image, nil)
-    }
-    
-    public func getPreviewLayer() -> AVCaptureVideoPreviewLayer? {
-        return self.previewLayer
     }
     
     fileprivate func _setVideoWithGPS(forLocation location: CLLocation) {
