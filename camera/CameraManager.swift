@@ -1456,6 +1456,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
                     // Registering to recieve the captureOutput from AVCaptureVideoDataOutputSampleBufferDelegate
                     validVideoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "VideoFramesQueue"))
                     captureSession.addOutput(validVideoOutput)
+                    validVideoOutput.connection(with: .video)?.isCameraIntrinsicMatrixDeliveryEnabled = true
             }
         }
         
