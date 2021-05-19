@@ -277,6 +277,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
     
     fileprivate var zoomScale       = CGFloat(1.0)
     fileprivate var beginZoomScale  = CGFloat(1.0)
+    fileprivate var minZoomScale    = CGFloat(1.0)
     fileprivate var maxZoomScale    = CGFloat(1.0)
     
     fileprivate func _tempFilePath() -> URL {
@@ -815,7 +816,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
             let captureDevice = device
             try captureDevice?.lockForConfiguration()
             
-            zoomScale = max(1.0, min(beginZoomScale * scale, maxZoomScale))
+            zoomScale = max(minZoomScale, min(beginZoomScale * scale, maxZoomScale))
             
             captureDevice?.videoZoomFactor = zoomScale
             
@@ -1371,10 +1372,21 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
             view.layer.addSublayer(previewLayer)
         })
     }
+
+    open func setMinZoomScale(_ scale: CGFloat) {
+        self.minZoomScale = max(self.minZoomScale, scale)
+    }
+    
+    open func setMaxZoomScale(_ scale: CGFloat) {
+        self.maxZoomScale = min(self.maxZoomScale, scale)
+    }
+
+    open func getZoomScale() -> CGFloat {
+        return self.zoomScale
+    }
     
     fileprivate func _setupMaxZoomScale() {
-        var maxZoom = CGFloat(1.0)
-        beginZoomScale = CGFloat(1.0)
+        var maxZoom = self.maxZoomScale
         
         if cameraDevice == .back, let backCameraDevice = backCameraDevice  {
             maxZoom = backCameraDevice.activeFormat.videoMaxZoomFactor
@@ -1814,7 +1826,7 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
 }
 
 fileprivate extension AVCaptureDevice {
-    fileprivate static var videoDevices: [AVCaptureDevice] {
+    static var videoDevices: [AVCaptureDevice] {
         return AVCaptureDevice.devices(for: AVMediaType.video)
     }
 }
