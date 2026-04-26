@@ -409,7 +409,11 @@ open class CameraManager: NSObject, AVCaptureFileOutputRecordingDelegate, UIGest
         self.animateCameraDeviceChange = false
         self.cameraDevice = .back
         self.cameraIsSetup = false
+        var layer = previewLayer
         self.previewLayer = nil
+        sessionQueue.async {
+            layer = nil
+        }
         self.captureSession = nil
         self.frontCameraDevice = nil
         self.backCameraDevice = nil
